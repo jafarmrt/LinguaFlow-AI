@@ -1,0 +1,7 @@
+{
+  "name": "LinguaFlow AI",
+  "description": "An intelligent language learning platform that transforms authentic English text into personalized study materials using AI analysis, context-aware flashcards, and pronunciation feedback.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
