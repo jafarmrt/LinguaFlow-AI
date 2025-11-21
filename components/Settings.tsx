@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppStore } from '../store/AppContext';
-import { AlertTriangle, Server, Settings as SettingsIcon, List, Volume2, BookOpen, CheckSquare } from 'lucide-react';
+import { AlertTriangle, Server, Settings as SettingsIcon, List, Volume2, BookOpen, CheckSquare, Download, Upload, Database } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AppSettings, AnalysisType } from '../types';
 
@@ -82,8 +82,9 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ label, settingKey, preset
 };
 
 export const Settings: React.FC = () => {
-  const { settings, updateSettings } = useAppStore();
-  const APP_VERSION = "1.7.0";
+  const { settings, updateSettings, exportUserData, importUserData } = useAppStore();
+  const APP_VERSION = "1.9.0";
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Defensive check: Ensure settings exists before rendering
   if (!settings) {
@@ -105,6 +106,21 @@ export const Settings: React.FC = () => {
       handleChange('enabledTypes', [...current, type]);
     }
   };
+  
+  const handleImportClick = () => {
+      fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          if (window.confirm("This will merge data from the backup file into your current library. Continue?")) {
+              importUserData(file);
+          }
+      }
+      // Reset
+      if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
@@ -120,6 +136,48 @@ export const Settings: React.FC = () => {
 
       <div className="space-y-6">
         
+        {/* Data Management */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+             <h2 className="text-lg font-medium text-gray-800 flex items-center">
+               <Database className="w-5 h-5 mr-2 text-brand-600" />
+               Data Management
+             </h2>
+             <p className="text-sm text-gray-500 mt-1">
+               Backup your progress or transfer it to another device.
+             </p>
+          </div>
+          <div className="p-6">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <button 
+                   onClick={exportUserData}
+                   className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700 font-medium"
+                 >
+                    <Download className="w-5 h-5 mr-2 text-gray-500" />
+                    Export Backup
+                 </button>
+                 
+                 <button 
+                   onClick={handleImportClick}
+                   className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-gray-700 font-medium"
+                 >
+                    <Upload className="w-5 h-5 mr-2 text-gray-500" />
+                    Import Backup
+                 </button>
+                 <input 
+                   type="file" 
+                   ref={fileInputRef} 
+                   className="hidden" 
+                   accept=".json" 
+                   onChange={handleFileChange}
+                 />
+             </div>
+             <p className="text-xs text-gray-400 mt-3 text-center">
+                Your data is stored safely in your browser. Use Export to create a physical backup file.
+             </p>
+          </div>
+        </div>
+
         {/* Content Analysis Config */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">

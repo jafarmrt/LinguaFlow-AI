@@ -190,6 +190,55 @@ export class DatabaseService {
     
     return results.slice(start, end);
   }
+
+  /**
+   * Exports the entire database to a JSON object.
+   */
+  async exportDatabase(): Promise<any> {
+    const db = await this.dbPromise;
+    const tx = db.transaction(['articles', 'segments', 'flashcards', 'settings', 'collections'], 'readonly');
+    
+    const data = {
+      version: 1,
+      timestamp: Date.now(),
+      articles: await tx.objectStore('articles').getAll(),
+      segments: await tx.objectStore('segments').getAll(),
+      flashcards: await tx.objectStore('flashcards').getAll(),
+      settings: await tx.objectStore('settings').get('config'), // Assuming 'config' is the key
+      collections: await tx.objectStore('collections').getAll(),
+    };
+    
+    await tx.done;
+    return data;
+  }
+
+  /**
+   * Imports a data object into the database.
+   * Uses upsert (put) to merge data.
+   */
+  async importDatabase(data: any): Promise<void> {
+    const db = await this.dbPromise;
+    const tx = db.transaction(['articles', 'segments', 'flashcards', 'settings', 'collections'], 'readwrite');
+
+    if (data.articles) {
+      for (const item of data.articles) await tx.objectStore('articles').put(item);
+    }
+    if (data.segments) {
+      for (const item of data.segments) await tx.objectStore('segments').put(item);
+    }
+    if (data.flashcards) {
+      for (const item of data.flashcards) await tx.objectStore('flashcards').put(item);
+    }
+    if (data.collections) {
+      for (const item of data.collections) await tx.objectStore('collections').put(item);
+    }
+    if (data.settings) {
+       // @ts-ignore
+       await tx.objectStore('settings').put({ ...data.settings, id: 'config' });
+    }
+
+    await tx.done;
+  }
 }
 
 export const dbService = new DatabaseService();

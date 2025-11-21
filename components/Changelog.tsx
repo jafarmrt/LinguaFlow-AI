@@ -4,6 +4,15 @@ import { Link } from 'react-router-dom';
 
 const CHANGES = [
   {
+    version: '1.9.0',
+    features: [
+      'Data Persistence & Export: Added a robust Backup & Restore system in Settings. You can now export your entire library, progress, and flashcards to a JSON file.',
+      'Safety First: Data is stored securely in your browser database, making it persistent across app updates or reloads.',
+      'Import Capability: Easily move your learning progress between devices by importing your backup file.',
+      'Stability Improvements: Enhanced database reliability for storing large books and card collections.'
+    ]
+  },
+  {
     version: '1.8.0',
     features: [
       'Massive Scale Support: Rebuilt the storage engine using IndexedDB to support millions of characters and over 100,000 flashcards without slowing down',

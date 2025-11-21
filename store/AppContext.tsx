@@ -24,6 +24,9 @@ interface AppContextType {
   getCardsForSession: (mode: 'due' | 'new' | 'all', filters: any, limit?: number) => Promise<Flashcard[]>;
   searchFlashcards: (filters: { articleId?: string, type?: string, level?: string, search?: string, limit?: number, offset?: number }) => Promise<Flashcard[]>;
   getArticleMetadata: (id: string) => Article | undefined;
+
+  exportUserData: () => Promise<void>;
+  importUserData: (file: File) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -164,33 +167,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const markCardReviewed = async (cardId: string, quality: number) => {
-    // We have to fetch the card to know its current stage
-    // Optimized: In a real app, we'd pass the card object, but keeping signature simple
-    // We'll implement a quick fetch in DB service if needed, but for now query by ID
-    // Note: dbService.getFlashcard isn't defined in previous step, let's use raw db access or add it.
-    // We will rely on a 'search' or just assume we can get it.
-    // For this scale, we need to ensure we can get a single card.
-    // Let's assume the calling component has the card data, but the interface is ID.
-    // We'll update the DB directly.
-    
-    // NOTE: In production, `dbService` should expose `getCard(id)`.
-    // I will cheat slightly and assume `dbService` has it or I'll do a scan? No, scan is bad.
-    // `idb`'s `get` works for key.
-    
-    // I will assume dbService is imported.
-    // Accessing private db promise is tricky.
-    // Let's just implement the logic in `db.ts`?
-    // No, logic belongs here.
-    
-    // Let's update `db.ts` to include `getFlashcard`.
-    // Since I can't edit `db.ts` twice in one prompt easily without confusion, I'll assume I added `getFlashcard` to `db.ts`.
-    // Wait, I haven't added it yet. I will update `db.ts` in the XML to include `getFlashcard`.
-    
-    // See below for `db.ts` update.
-  };
-  
-  // Re-implementing markCardReviewed with the assumption that `db.ts` has `getFlashcard`
-  const markCardReviewedReal = async (cardId: string, quality: number) => {
       const card = await dbService.getFlashcard(cardId);
       if (!card) return;
       
@@ -241,6 +217,47 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const getArticleMetadata = (id: string) => articles.find(a => a.id === id);
 
+  const exportUserData = async () => {
+    try {
+      const data = await dbService.exportDatabase();
+      const jsonString = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `linguaflow-backup-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Export failed", e);
+      alert("Export failed. Check console.");
+    }
+  };
+
+  const importUserData = async (file: File) => {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await dbService.importDatabase(data);
+      
+      // Reload in-memory state
+      const [dbArticles, dbSettings] = await Promise.all([
+        dbService.getArticles(),
+        dbService.getSettings()
+      ]);
+      setArticles(dbArticles.reverse());
+      if (dbSettings) setSettings({ ...DEFAULT_SETTINGS, ...dbSettings });
+      
+      alert("Import successful!");
+    } catch (e) {
+      console.error("Import failed", e);
+      alert("Import failed. Invalid file format.");
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       articles,
@@ -255,10 +272,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       updateSegmentAnalysis,
       approveWordsForSegment,
       addCustomWordToSegment,
-      markCardReviewed: markCardReviewedReal,
+      markCardReviewed,
       searchFlashcards,
       getCardsForSession,
-      getArticleMetadata
+      getArticleMetadata,
+      exportUserData,
+      importUserData
     }}>
       {children}
     </AppContext.Provider>
